@@ -2,9 +2,17 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'BROWSER', choices: ['chrome', 'firefox'], description: 'Select the browser to run the tests on')
-        string(name: 'URL', defaultValue: 'https://www.google.com', description: 'Enter the URL to test')
-        string(name: 'EXPECTED_TITLE', defaultValue: 'Google', description: 'Enter the expected title of the page')
+        choice(name: 'BROWSER',
+               choices: ['chrome', 'firefox'],
+               description: 'Select the browser to run the tests on')
+
+        string(name: 'URL',
+               defaultValue: 'https://www.google.com',
+               description: 'Enter the URL to test')
+
+        string(name: 'EXPECTED_TITLE',
+               defaultValue: 'Google',
+               description: 'Enter the expected title of the page')
     }
 
     stages {
@@ -13,11 +21,16 @@ pipeline {
                 script {
                     def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
 
-                    bat "docker build --build-arg BROWSER=${params.BROWSER} -t ${dockerImageName} ."
+                    // Create folder for test reports (on host)
+                    bat "mkdir test-reports"
 
-                    // Make sure reports go to a local folder Jenkins can read
+                    // Build Docker image
                     bat """
-                        mkdir test-reports
+                        docker build --build-arg BROWSER=${params.BROWSER} -t ${dockerImageName} .
+                    """
+
+                    // Run container with environment vars and volume mount
+                    bat """
                         docker run --rm ^
                         -e BROWSER=${params.BROWSER} ^
                         -e URL=${params.URL} ^
@@ -34,9 +47,14 @@ pipeline {
         always {
             script {
                 def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
+
+                // Clean up Docker image
                 bat "docker rmi -f ${dockerImageName}"
 
-                // Publish the HTML report
+                // List test-reports to verify report is created
+                bat "dir test-reports"
+
+                // Publish the HTML report to Jenkins
                 publishHTML([
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,

@@ -84,6 +84,8 @@ COPY tests /app/tests
 RUN mkdir -p /app/test-reports
 
 # Final ENTRYPOINT
-ENTRYPOINT ["python", "-m", "pytest", "--html=test-reports/report.html", "--self-contained-html"]
+#ENTRYPOINT ["python", "-m", "pytest", "--html=test-reports/report.html", "--self-contained-html"]
+ENTRYPOINT ["python", "-m", "pytest", "--html=/app/test-reports/report.html", "--self-contained-html"]
+
 
 
