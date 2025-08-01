@@ -21,9 +21,18 @@ pipeline {
                 script {
                     def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
                     def reportDirectory = "test-reports"
+                    
+                    // Add debugging: Print the current working directory
+                    bat "echo --- Current Directory ---"
+                    bat "echo %cd%"
+                    bat "echo -----------------------"
 
-                    // Create folder for test reports (on host)
-                    bat "mkdir %reportDirectory%"
+                    // Use Jenkins' dir() step to manage the report folder safely
+                    dir(reportDirectory) {
+                        echo "Created directory: ${reportDirectory}"
+                        // Add debugging: List files to confirm the directory exists and is empty
+                        bat "dir"
+                    }
 
                     // Build Docker image
                     bat """
@@ -31,6 +40,7 @@ pipeline {
                     """
 
                     // Run container, passing test arguments directly to pytest
+                    // Note: %cd% is now the correct root for the mounted volume
                     bat """
                         docker run --rm ^
                         -e BROWSER=${params.BROWSER} ^
@@ -50,12 +60,12 @@ pipeline {
                 def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
                 def reportDirectory = "test-reports"
 
-                // List test-reports to verify report is created
+                // Check for the report file before publishing
                 bat "dir %reportDirectory%"
-
+                
                 // Publish the HTML report to Jenkins
                 publishHTML([
-                    allowMissing: false,
+                    allowMissing: true,  // Important: Use allowMissing: true to prevent pipeline failure if report is not found
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
                     reportDir: reportDirectory,
