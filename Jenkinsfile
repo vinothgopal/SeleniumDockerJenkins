@@ -16,22 +16,28 @@ pipeline {
     }
 
     stages {
-        stage('Build and Run Tests') {
+        stage('Build Docker Image') {
             steps {
                 script {
                     def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
-
-                    // Build Docker image
                     bat """
                         docker build --build-arg BROWSER=${params.BROWSER} -t ${dockerImageName} .
                     """
+                }
+            }
+        }
 
-                    // Run tests in container
+        stage('Run Tests in Container') {
+            steps {
+                script {
+                    def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
                     bat """
+                        mkdir test-reports
                         docker run --rm ^
                         -e BROWSER=${params.BROWSER} ^
                         -e URL=${params.URL} ^
                         -e EXPECTED_TITLE=${params.EXPECTED_TITLE} ^
+                        -v %CD%\\test-reports:/app ^
                         ${dockerImageName}
                     """
                 }
@@ -43,9 +49,18 @@ pipeline {
         always {
             script {
                 def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
-                // Cleanup image
                 bat "docker rmi -f ${dockerImageName}"
             }
+
+            // Publish HTML report
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'test-reports',
+                reportFiles: 'report.html',
+                reportName: 'Pytest Report'
+            ])
         }
     }
 }

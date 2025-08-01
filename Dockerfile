@@ -81,4 +81,5 @@ RUN pip install --no-cache-dir -r requirements.txt && pip show selenium
 COPY tests /app/tests
 
 # Set entrypoint to run pytest via python module
-ENTRYPOINT ["python", "-m", "pytest"]
+ENTRYPOINT ["python", "-m", "pytest", "--html=report.html", "--self-contained-html"]
+
