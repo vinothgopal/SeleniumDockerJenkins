@@ -19,17 +19,19 @@ pipeline {
         stage('Build and Run Tests') {
             steps {
                 script {
-                    def dockerImageName = "selenium-${params.BROWSER}-tests:${env.BUILD_NUMBER}"
+                    def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
 
-                    // Build the single Docker image, passing the BROWSER parameter as a build argument
-                    sh "docker build --build-arg BROWSER=${params.BROWSER} -t ${dockerImageName} ."
+                    // Build Docker image
+                    bat """
+                        docker build --build-arg BROWSER=${params.BROWSER} -t ${dockerImageName} .
+                    """
 
-                    // Run the Docker container with parameters passed as environment variables
-                    sh """
-                        docker run --rm \
-                        -e BROWSER="${params.BROWSER}" \
-                        -e URL="${params.URL}" \
-                        -e EXPECTED_TITLE="${params.EXPECTED_TITLE}" \
+                    // Run tests in container
+                    bat """
+                        docker run --rm ^
+                        -e BROWSER=${params.BROWSER} ^
+                        -e URL=${params.URL} ^
+                        -e EXPECTED_TITLE=${params.EXPECTED_TITLE} ^
                         ${dockerImageName}
                     """
                 }
@@ -39,10 +41,10 @@ pipeline {
 
     post {
         always {
-            // Clean up the specific image created for this build
             script {
-                def dockerImageName = "selenium-${params.BROWSER}-tests:${env.BUILD_NUMBER}"
-                sh "docker rmi ${dockerImageName}"
+                def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
+                // Cleanup image
+                bat "docker rmi -f ${dockerImageName}"
             }
         }
     }
