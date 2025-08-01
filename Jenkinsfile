@@ -30,12 +30,13 @@ pipeline {
                     """
 
                     // Run container with environment vars and volume mount
+                    // The ENTRYPOINT in the Dockerfile will now handle the pytest command
                     bat """
                         docker run --rm ^
                         -e BROWSER=${params.BROWSER} ^
                         -e URL=${params.URL} ^
                         -e EXPECTED_TITLE=${params.EXPECTED_TITLE} ^
-                        -v %cd%\\test-reports:/app/test-reports ^
+                        -v "%cd%\\test-reports":/app/test-reports ^
                         ${dockerImageName}
                     """
                 }
@@ -47,9 +48,6 @@ pipeline {
         always {
             script {
                 def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
-
-                // Clean up Docker image
-                bat "docker rmi -f ${dockerImageName}"
 
                 // List test-reports to verify report is created
                 bat "dir test-reports"
@@ -63,6 +61,9 @@ pipeline {
                     reportFiles: 'report.html',
                     reportName: 'Pytest Report'
                 ])
+                
+                // Clean up Docker image
+                bat "docker rmi -f ${dockerImageName}"
             }
         }
     }
