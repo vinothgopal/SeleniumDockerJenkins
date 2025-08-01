@@ -20,24 +20,24 @@ pipeline {
             steps {
                 script {
                     def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
+                    def reportDirectory = "test-reports"
 
                     // Create folder for test reports (on host)
-                    bat "mkdir test-reports"
+                    bat "mkdir %reportDirectory%"
 
                     // Build Docker image
                     bat """
                         docker build --build-arg BROWSER=${params.BROWSER} -t ${dockerImageName} .
                     """
 
-                    // Run container with environment vars and volume mount
-                    // The ENTRYPOINT in the Dockerfile will now handle the pytest command
+                    // Run container, passing test arguments directly to pytest
                     bat """
                         docker run --rm ^
                         -e BROWSER=${params.BROWSER} ^
                         -e URL=${params.URL} ^
                         -e EXPECTED_TITLE=${params.EXPECTED_TITLE} ^
-                        -v "%cd%\\test-reports":/app/test-reports ^
-                        ${dockerImageName}
+                        -v "%cd%\\${reportDirectory}":/app/test-reports ^
+                        ${dockerImageName} --html=/app/test-reports/report.html --self-contained-html
                     """
                 }
             }
@@ -48,16 +48,17 @@ pipeline {
         always {
             script {
                 def dockerImageName = "selenium-${params.BROWSER}-tests-${env.BUILD_NUMBER}"
+                def reportDirectory = "test-reports"
 
                 // List test-reports to verify report is created
-                bat "dir test-reports"
+                bat "dir %reportDirectory%"
 
                 // Publish the HTML report to Jenkins
                 publishHTML([
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: 'test-reports',
+                    reportDir: reportDirectory,
                     reportFiles: 'report.html',
                     reportName: 'Pytest Report'
                 ])

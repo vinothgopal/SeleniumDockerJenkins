@@ -1,7 +1,7 @@
 # Use a base image with Python and necessary tools
 FROM python:3.10-slim
 
-# Install common dependencies and jq (needed for JSON parsing)
+# Install common dependencies
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -27,11 +27,7 @@ RUN if [ "$BROWSER" = "chrome" ]; then \
         libnss3 \
         libxss1 \
         lsb-release \
-        xdg-utils \
-        wget \
-        unzip \
-        curl \
-        gnupg && \
+        xdg-utils && \
     rm -rf /var/lib/apt/lists/* && \
     \
     # Add Google Chrome official repo and key
@@ -47,8 +43,8 @@ RUN if [ "$BROWSER" = "chrome" ]; then \
     \
     # Get matching ChromeDriver download URL from Google's JSON
     CHROMEDRIVER_URL="https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" && \
-    MATCHING_VERSION=$(curl -s $CHROMEDRIVER_URL | jq -r --arg ver "$CHROME_VERSION" '.versions[] | select(.version == $ver) | .version') && \
-    DOWNLOAD_URL=$(curl -s $CHROMEDRIVER_URL | jq -r --arg ver "$MATCHING_VERSION" '.versions[] | select(.version == $ver) | .downloads.chromedriver[] | select(.platform == "linux64") | .url') && \
+    MATCHING_VERSION=$(curl -s "$CHROMEDRIVER_URL" | jq -r --arg ver "$CHROME_VERSION" '.versions[] | select(.version == $ver) | .version') && \
+    DOWNLOAD_URL=$(curl -s "$CHROMEDRIVER_URL" | jq -r --arg ver "$MATCHING_VERSION" '.versions[] | select(.version == $ver) | .downloads.chromedriver[] | select(.platform == "linux64") | .url') && \
     \
     # Download, unzip, and move ChromeDriver to /usr/bin
     wget -q "$DOWNLOAD_URL" -O chromedriver.zip && \
@@ -80,12 +76,5 @@ RUN pip install --no-cache-dir -r requirements.txt && pip show selenium
 # Copy your test files
 COPY tests /app/tests
 
-# Create reports folder
-RUN mkdir -p /app/test-reports
-
-# Final ENTRYPOINT
-#ENTRYPOINT ["python", "-m", "pytest", "--html=test-reports/report.html", "--self-contained-html"]
-ENTRYPOINT ["python", "-m", "pytest", "--html=/app/test-reports/report.html", "--self-contained-html"]
-
-
-
+# Final ENTRYPOINT should be flexible
+ENTRYPOINT ["python", "-m", "pytest"]
